@@ -1,5 +1,5 @@
 import { useNode, useEditor } from '@craftjs/core';
-import React from 'react';
+import React, { useCallback, useRef } from 'react';
 import ContentEditable from 'react-contenteditable';
 
 import { TextSettings } from './TextSettings';
@@ -30,13 +30,26 @@ export const Text = ({
   const { enabled } = useEditor((state) => ({
     enabled: state.options.enabled,
   }));
+  const textRef = useRef(text);
+
+  const decodeHTML = useCallback((str: string) => {
+    const div = document.createElement('div');
+    div.innerHTML = str;
+    return div.textContent || '';
+  }, []);
   return (
     <ContentEditable
       innerRef={connect}
       html={text} // innerHTML of the editable div
       disabled={!enabled}
       onChange={(e) => {
-        setProp((prop) => (prop.text = e.target.value), 500);
+        // Avoid calling setProp many times
+        const newText = e.target.value;
+
+        if (decodeHTML(newText) !== decodeHTML(textRef.current)) {
+          textRef.current = newText;
+          setProp((prop) => (prop.text = newText), 500);
+        }
       }} // use true to disable editing
       tagName="h2" // Use a custom HTML tag (uses a div by default)
       style={{
